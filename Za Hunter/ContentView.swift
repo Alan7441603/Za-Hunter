@@ -19,19 +19,61 @@ struct ContentView: View {
         )
     @StateObject var locationManager = LocationManager()
     @State private var userTrackingMode: MapUserTrackingMode = .follow
+    @State private var places = [Place]()
     var body: some View {
-        Map(
-            coordinateRegion: $region,
-            interactionModes: .all,
-            showsUserLocation: true,
-            userTrackingMode: $userTrackingMode
-
-                )
+        Map(coordinateRegion: $region,
+                    interactionModes: .all,
+                    showsUserLocation: true,
+                    userTrackingMode: $userTrackingMode,
+                    annotationItems: places) { place in
+                    MapAnnotation(coordinate: place.coordinate,
+                    anchorPoint: CGPoint(x: 0.5, y: 1.2)) {
+                    Marker(name: place.name)
+                    }
+                }
     }
+    func findLocation(name: String) {
+            locationManager.geocoder.geocodeAddressString(name) { (placemarks, error) in
+                guard placemarks != nil else {
+                    print("Could not locate \(name)")
+                    return
+                }
+                for placemark in placemarks! {
+                    let place = Place(name: "\(placemark.name!), \(placemark.administrativeArea!)",
+                                      coordinate: placemark.location!.coordinate)
+                    places.append(place)
+                }
+            }
+        }
 }
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+    }
+}
+
+struct Place: Identifiable {
+    let id = UUID()
+    let name: String
+    let coordinate: CLLocationCoordinate2D
+}
+
+struct Marker: View {
+    var name: String
+    var body: some View {
+        ZStack {
+            VStack {
+                Spacer(minLength: 15)
+                Rectangle()
+                    .fill(Color.black)
+                    .frame(width: 30, height: 30, alignment: .center)
+                    .rotationEffect(.degrees(45))
+            }
+            Capsule()
+                .fill(Color.red)
+                .frame(width: 200, height: 30, alignment: .center)
+            Text(name)
+        }
     }
 }
